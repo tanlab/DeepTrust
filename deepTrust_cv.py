@@ -135,7 +135,7 @@ class DeepTrust(object):
         self.model = Model(inputs=self.cae.input,
                            outputs=[clustering_layer, self.cae.output])
 
-    def pretrain(self, x, batch_size=128, epochs=300, optimizer='adam'):
+    def pretrain(self, x, batch_size=32, epochs=200, optimizer='adam'):
         print('...Pretraining...')
         self.cae.compile(optimizer=optimizer, loss='mse')
 
@@ -161,7 +161,7 @@ class DeepTrust(object):
     def compile(self, loss=['kld', 'mse'], loss_weights=[1, 1], optimizer='adam'):
         self.model.compile(loss=loss, loss_weights=loss_weights, optimizer=optimizer)
 
-    def fit(self, x, y=None, batch_size=64, maxiter=2e4, tol=1e-3,
+    def fit(self, x, y=None, batch_size=32, maxiter=2e4, tol=1e-3,
             update_interval=140, cae_weights=None):
 
         save_interval = x.shape[0] / batch_size * 5
@@ -173,20 +173,20 @@ class DeepTrust(object):
 
         # Step 2: initialize cluster centers using k-means
         print('Initializing cluster centers with k-means or gmm.')
-        """
+        
         kmeans = KMeans(n_clusters=self.n_clusters, n_init=20)
         self.y_pred = kmeans.fit_predict(self.encoder.predict(x))
         y_pred_last = np.copy(self.y_pred)
         self.model.get_layer(name='clustering').set_weights([kmeans.cluster_centers_])
-        """
+        
 
         # You can also want to initialize the weights with Gaussian Mixture Model
 
-        gmm = mixture.GaussianMixture(n_components=self.n_clusters, covariance_type="full")
-        gmm = mixture.GaussianMixture(n_components=self.n_clusters, n_init=20)
-        self.y_pred = gmm.fit_predict(self.encoder.predict(x))
-        y_pred_last = np.copy(self.y_pred)
-        self.model.get_layer(name='clustering').set_weights([gmm.means_])
+        #gmm = mixture.GaussianMixture(n_components=self.n_clusters, covariance_type="full")
+        #gmm = mixture.GaussianMixture(n_components=self.n_clusters, n_init=20)
+        #self.y_pred = gmm.fit_predict(self.encoder.predict(x))
+        #y_pred_last = np.copy(self.y_pred)
+        #self.model.get_layer(name='clustering').set_weights([gmm.means_])
         
         # Step 3: deep clustering
         loss = [0, 0, 0]
@@ -233,8 +233,8 @@ if __name__ == "__main__":
     
     parser.add_argument('--dataset', default='simulated')
     parser.add_argument('--n_clusters', default=5, type=int)
-    parser.add_argument('--batch_size', default=128, type=int)
-    parser.add_argument('--maxiter', default=420, type=int)
+    parser.add_argument('--batch_size', default=32, type=int)
+    parser.add_argument('--maxiter', default=1400, type=int)
     parser.add_argument('--gamma', default=0.1, type=float,
                         help='coefficient of clustering loss')
     parser.add_argument('--update_interval', default=140, type=int)
@@ -252,10 +252,7 @@ if __name__ == "__main__":
     elif args.dataset == 'biological':
         x_vec = pd.read_pickle ("data/biological-data/preprocessed/real_data_timeseries_new.p")
         x = pd.read_pickle ("data/biological-data/preprocessed/real_image_data_new.p")
-        print(x_vec.shape)
-        print(x.shape)
         x = x.reshape(x.shape + (1,))
-        print(x.shape)
         x = x/255.0
         y = None
         n_clusters = 5
@@ -310,7 +307,7 @@ if __name__ == "__main__":
             # Store all results in all_results dictionary
             all_results = {}
 
-            deepTrust_model = DeepTrust(input_shape=x.shape[1:], filters=[32, 64, 128, 10], n_clusters=n_clusters)
+            deepTrust_model = DeepTrust(input_shape=x.shape[1:], filters=[32, 64, 128, 5], n_clusters=n_clusters)
 
 
             # begin clustering.
@@ -386,9 +383,9 @@ if __name__ == "__main__":
             temp['sil'] = silhouette_score(x_vec_test, pred)
             all_results['ward'] = temp
 
-            my_counter += 1
-            pd.to_pickle(all_results, "all_results_"+args.dataset+"_"+str(my_counter)+".p")
 
+            pd.to_pickle(all_results, "all_results_"+args.dataset+"_"+str(my_counter)+".p")
+            my_counter += 1
     else: ## BIOLOGICAL
 
         # Store all results in all_results dictionary
@@ -420,7 +417,6 @@ if __name__ == "__main__":
         temp['sil'] = silhouette_score(deepTrust_model.encoder.predict(x), y_pred)
         #temp['sil'] = silhouette_score(x_test, y_pred)
         all_results['deepTrust'] = temp
-        print(all_results)
         del deepTrust_model
         print("================ Scores are calculated..=====================")
 
@@ -445,7 +441,6 @@ if __name__ == "__main__":
             temp['acc'] = -1
         temp['sil'] = silhouette_score(x_vec, pred)
         all_results['gmm'] = temp
-        print("gmm:", temp)
         ######################################## K Means ################################################
         kmeans = cluster.KMeans(n_clusters=number_of_clusters, n_init=20)
         kmeans.fit(x_vec)
@@ -458,7 +453,6 @@ if __name__ == "__main__":
             temp['acc'] = -1
         temp['sil'] = silhouette_score(x_vec, pred)
         all_results['kmeans'] = temp
-        print("kmeans:", temp)
         ######################################## Ward ################################################
         ward = cluster.AgglomerativeClustering(n_clusters=number_of_clusters, linkage='ward')
         pred = ward.fit_predict(x_vec)
@@ -470,6 +464,6 @@ if __name__ == "__main__":
             temp['acc'] = -1
         temp['sil'] = silhouette_score(x_vec, pred)
         all_results['ward'] = temp
-        print("ward:", temp)
-        my_counter += 1
+
         pd.to_pickle(all_results, "all_results_"+args.dataset+"_"+str(my_counter)+".p")
+        my_counter += 1
