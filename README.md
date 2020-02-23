@@ -15,15 +15,13 @@ python deepTrust.py --dataset simulated
 ```   
 3. Run experiment on Biological Data.   
 ```
-cd deepTrust
 python deepTrust.py --dataset biological
 ```  
-
-
-
 
 ## References
 
 deepTrust is modified and extention version of https://github.com/XifengGuo/DCEC
+
 Deep Autoencoder implementation: https://github.com/bbardakk/DEC-keras
+
 DPGP implementation: https://github.com/PrincetonUniversity/DP_GP_cluster
